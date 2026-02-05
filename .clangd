@@ -1,0 +1,26 @@
+# clangd configuration for the library codebase.
+# https://clangd.llvm.org/config
+
+---
+# Default conditions
+
+Diagnostics:
+  Includes:
+    IgnoreHeader:
+      - \.compat\.inc$
+
+---
+# Header-specific configuration
+
+If:
+  PathMatch: .*\.(h|hh|hpp|hxx|inc)$
+
+CompileFlags:
+  Add:
+    # These warnings are frequently noisy in headers without full TU context.
+    - -Wno-unneeded-internal-declaration
+    - -Wno-unused-const-variable
+    - -Wno-unused-function
+    - -Wno-unused-variable
+
+---

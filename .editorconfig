@@ -1,0 +1,29 @@
+# EditorConfig for the engine codebase.
+# https://editorconfig.org/
+
+root = true
+
+# Default rules
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 4
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = true
+max_line_length = 120
+
+# Python
+[{*.py}]
+indent_style = space
+indent_size = 4
+
+# YAML & Clang configuration files
+[{*.yml,*.yaml,.clang-format,.clang-tidy,.clangd}]
+indent_style = space
+indent_size = 2
+
+# Visual Studio project files
+[{*.props,*.vcxproj}]
+indent_style = space
+indent_size = 2
