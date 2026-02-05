@@ -1,0 +1,36 @@
+name: Format Check
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  clang-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install clang-format
+        run: pip install clang-format
+
+      - name: Format src/
+        run: |
+          find src -name "*.hpp" -o -name "*.h" | xargs clang-format -i -style=file
+
+      - name: Format tests/
+        run: |
+          find tests -name "*.cpp" | xargs clang-format -i -style=file
+
+      - name: Check for changes
+        run: |
+          if git diff --quiet; then
+            echo "All files are properly formatted"
+          else
+            echo "Formatting issues found:"
+            git diff --stat
+            exit 1
+          fi

@@ -1,0 +1,59 @@
+Checks:
+  - -*
+
+  # Core correctness & safety
+  - cppcoreguidelines-pro-type-member-init
+
+  # Modern C++ hygiene
+  - modernize-deprecated-headers
+  - modernize-redundant-void-arg
+  - modernize-use-bool-literals
+  - modernize-use-default-member-init
+  - modernize-use-nullptr
+
+  # Readability
+  - readability-braces-around-statements
+  - readability-redundant-member-init
+
+# File classification
+HeaderFileExtensions:
+  - ""
+  - h
+  - hh
+  - hpp
+  - hxx
+  - inc
+  - glsl
+
+ImplementationFileExtensions:
+  - c
+  - cc
+  - cpp
+  - cxx
+  - m
+  - mm
+  - java
+
+# Scope control
+# Only analyse engine-owned code, not vendored dependencies
+HeaderFilterRegex: (core|doc|drivers|editor|main|modules|platform|scene|servers|tests)/
+
+# Formatting
+# Defer to .clang-format for all fixes
+FormatStyle: file
+
+# Check-specific configuration
+CheckOptions:
+  # Enforce explicit initialisation of POD members,
+  # but avoid noise in fixed-size arrays.
+  cppcoreguidelines-pro-type-member-init.IgnoreArrays: true
+  cppcoreguidelines-pro-type-member-init.UseAssignment: true
+
+  # Ensure deprecated headers are caught even in header files.
+  modernize-deprecated-headers.CheckHeaderFile: true
+
+  # Do not ignore macros; engine macros must obey modern rules.
+  modernize-use-bool-literals.IgnoreMacros: false
+
+  modernize-use-default-member-init.IgnoreMacros: false
+  modernize-use-default-member-init.UseAssignment: true
