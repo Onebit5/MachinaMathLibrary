@@ -48,7 +48,7 @@ Demonstrates hierarchical transform nodes with parent/child relationships.
 
 ### 04_free_camera.cpp - Free Fly Camera
 
-![04_free_camera](screenshots/04_free_camera.png)
+![04_free_camera](screenshots/freeflycamera.gif)
 
 First-person free fly camera for navigating 3D space.
 
