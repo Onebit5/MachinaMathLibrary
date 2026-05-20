@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -113,7 +113,7 @@ struct Quaternion {
 		return from_to_rotation(from, to);
 	}
 
-	[[nodiscard]] void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
+	void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
 		out_angle = angle();
 		out_axis = axis();
 	}

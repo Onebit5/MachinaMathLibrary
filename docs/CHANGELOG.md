@@ -2,6 +2,23 @@
 
 All notable changes to Machina Math Library are documented here.
 
+## [v1.0.1] - 2026-05-20
+
+### Fixed
+
+- **Critical**: Added missing `Matrix4::inverse()` and `Matrix4::inverse_affine()` methods (both were referenced throughout the codebase but did not exist, causing compilation failures in any code using `TransformNode`)
+- **Critical**: Fixed `Math::is_inf()` — was using `value > Constants<T>::infinity` which can never be true; replaced with `std::isinf()`
+- **Critical**: Fixed BVH `ray_aabb_intersect_distance()` gated behind `#if MML_USE_SIMD` — the function is not SIMD-specific but was only compiled when SIMD was enabled, breaking `ray_intersect_closest()` with SIMD off
+- Fixed `Epsilon<T>::value` truncation — `MML_EPSILON` used `1e-6f` suffix which truncated to float precision for `double`; changed to `1e-6` without suffix for proper type deduction
+- Fixed `ray_capsule()` overwriting `out_t`/`out_point` in both fallback paths — both sphere endpoint tests wrote to the same output variables; proper distance comparison with separate scratch variables
+- Fixed `transform_node.hpp` missing `#include <cstdint>` for `uint32_t` usage
+- Fixed `Float8` struct missing closing `};` in SIMD path
+- Fixed `Float8::operator*(float)` using `_mm_set1_ps` instead of `_mm256_set1_ps` 
+- Fixed `generate_header.py` missing `#include <memory>` in global includes (caused `std::unique_ptr` unresolved)
+- Fixed `generate_header.py` missing SIMD intrinsic headers (`<emmintrin.h>`, `<smmintrin.h>`, `<immintrin.h>`)
+- Fixed `[[nodiscard]]` attribute on `void` function `Quaternion::to_axis_angle()`
+- Fixed `MML_FORCE_INLINE` on recursive `TransformNode::update_world_matrix()` causing inlining failure
+
 ## [v1.0.0] - 2026-02-05
 
 ### Added

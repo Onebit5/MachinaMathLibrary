@@ -4,13 +4,16 @@ import argparse
 from pathlib import Path
 import codecs
 
-HEADER_TEMPLATE = '''/**************************************************************************/
+AUTHOR = "Jose A. Perez de Azpillaga"
+LINE_WIDTH = 76
+
+HEADER_TEMPLATE = """/**************************************************************************/
 /*  {filename:<69} */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+{copyright_line}
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -31,44 +34,47 @@ HEADER_TEMPLATE = '''/**********************************************************
 /* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE           */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
-'''
+"""
+
+def format_header_line(content):
+    """Format a header line with correct right-padding.
+    
+    Total line width is LINE_WIDTH. Prefix '/* ' is 3 chars, suffix ' */' is 3 chars.
+    Content area is LINE_WIDTH - 6 chars.
+    """
+    content_area = LINE_WIDTH - 6
+    padding = content_area - len(content)
+    if padding < 1:
+        padding = 1
+    return f"/* {content}{' ' * padding} */"
+
+def format_header(filename):
+    """Format the header with proper filename alignment."""
+    if len(filename) > 69:
+        filename = "..." + filename[-66:]
+    
+    copyright_content = f"Copyright (c) 2026-present {AUTHOR}"
+    copyright_line = format_header_line(copyright_content)
+    
+    return HEADER_TEMPLATE.format(filename=filename, copyright_line=copyright_line)
 
 def get_project_root():
     """Get the project root directory (parent of scripts folder)."""
     script_path = Path(__file__).resolve()
     return script_path.parent.parent
 
-def format_header(filename):
-    """Format the header with proper filename alignment."""
-    # Fixed width is 69 in your template
-    if len(filename) > 69:
-        filename = "..." + filename[-66:]
-    return HEADER_TEMPLATE.format(filename=filename)
-
 def detect_header_boundaries(content):
     """Detect the start and end positions of existing header."""
-    header_end_marker = "/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */"
-    header_end_line = "/**************************************************************************/"
-    
-    # Look for the header pattern
     lines = content.splitlines()
-    in_header = False
     header_start = None
     header_end = None
     
     for i, line in enumerate(lines):
-        # Detect start of header
-        if line.startswith("/**************************************************************************/"):
+        stripped = line.strip()
+        if stripped.startswith("/**************************************************************************/"):
             if header_start is None:
                 header_start = i
-                in_header = True
-        
-        # Detect end of header
-        if in_header and line == header_end_line:
-            # Check if previous line contains the end marker
-            if i > 0 and header_end_marker in lines[i-1]:
-                header_end = i
-                break
+            header_end = i
     
     return header_start, header_end
 

@@ -1,10 +1,10 @@
 /**************************************************************************/
-/*  mml.hpp                                                               */
+/*  mml.hpp — Machina Math Library (single-header)                      */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -22,28 +22,39 @@
 /* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
 /* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
 /* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
-/* OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE           */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
-
 #ifndef MML_HPP
 #define MML_HPP
 
-#include <algorithm>
-#include <array>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
-#include <istream>
-#include <limits>
-#include <numeric>
-#include <ostream>
-#include <random>
 #include <type_traits>
+#include <algorithm>
+#include <array>
+#include <memory>
 #include <vector>
+#include <limits>
+#include <ostream>
+#include <istream>
+#include <functional>
+#include <numeric>
+#include <random>
+
+#if defined(__SSE2__) || defined(__AVX__)
+#include <emmintrin.h>
+#endif
+#if defined(__SSE4_1__) || defined(__AVX__)
+#include <smmintrin.h>
+#endif
+#if defined(__AVX__)
+#include <immintrin.h>
+#endif
 
 namespace mml {
+
 
 #ifndef MML_USE_SIMD
 #define MML_USE_SIMD 0
@@ -119,8 +130,11 @@ namespace mml {
 #endif
 
 #ifndef MML_EPSILON
-#define MML_EPSILON 1e-6f
+#define MML_EPSILON 1e-6
 #endif
+
+
+
 
 template <typename T>
 struct Constants {
@@ -166,6 +180,11 @@ struct Constants {
 
 using Constantsf = Constants<float>;
 using Constantsd = Constants<double>;
+
+
+
+
+
 
 template <typename T>
 struct Epsilon {
@@ -269,6 +288,11 @@ struct Epsilon {
 
 using Epsilonf = Epsilon<float>;
 using Epsilond = Epsilon<double>;
+
+
+
+
+
 
 template <typename T>
 struct Math {
@@ -527,7 +551,7 @@ struct Math {
 
 	MML_FORCE_INLINE static bool is_inf(T value) {
 		if constexpr (std::is_floating_point_v<T>) {
-			return value > Constants<T>::infinity || value < -Constants<T>::infinity;
+			return std::isinf(value);
 		}
 		return false;
 	}
@@ -543,6 +567,11 @@ struct Math {
 using Mathf = Math<float>;
 using Mathd = Math<double>;
 using Mathi = Math<int>;
+
+
+
+
+
 
 template <typename T>
 struct Vector3 {
@@ -874,6 +903,11 @@ template <typename T>
 using Vector3f = Vector3<float>;
 using Vector3d = Vector3<double>;
 
+
+
+
+
+
 template <typename T>
 struct Matrix3 {
 	static_assert(std::is_floating_point_v<T>, "Matrix3 requires floating-point type");
@@ -1204,6 +1238,11 @@ template <typename T>
 using Matrix3f = Matrix3<float>;
 using Matrix3d = Matrix3<double>;
 
+
+
+
+
+
 template <typename T>
 struct is_floating_point : std::is_floating_point<T> {};
 
@@ -1235,6 +1274,10 @@ template <bool UseSimd>
 struct Implementation {
 	static constexpr bool use_simd = UseSimd && SIMDTraits::enabled;
 };
+
+
+
+
 
 namespace simd {
 
@@ -1349,7 +1392,8 @@ struct Float8 {
 	Float8 operator+(const Float8 &rhs) const { return Float8(_mm256_add_ps(v, rhs.v)); }
 	Float8 operator-(const Float8 &rhs) const { return Float8(_mm256_sub_ps(v, rhs.v)); }
 	Float8 operator*(const Float8 &rhs) const { return Float8(_mm256_mul_ps(v, rhs.v)); }
-	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm_set1_ps(scalar))); }
+	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm256_set1_ps(scalar))); }
+};
 
 	struct Double4 {
 		__m256d v;
@@ -1401,7 +1445,11 @@ struct Double2 {
 };
 #endif
 
-} //namespace simd
+} 
+
+
+
+
 
 template <typename T>
 struct Vector2 {
@@ -1683,6 +1731,11 @@ template <typename T>
 
 using Vector2f = Vector2<float>;
 using Vector2d = Vector2<double>;
+
+
+
+
+
 
 template <typename T>
 struct Vector4 {
@@ -2260,6 +2313,11 @@ private:
 
 #endif
 
+
+
+
+
+
 template <typename T>
 struct [[nodiscard]] Matrix4 {
 	static_assert(std::is_floating_point_v<T>, "Matrix4 requires floating-point type");
@@ -2648,10 +2706,86 @@ struct [[nodiscard]] Matrix4 {
 	[[nodiscard]] MML_FORCE_INLINE Vector3<T> forward_vector_raw() const {
 		return Vector3<T>(cols[2].x, cols[2].y, cols[2].z);
 	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse_affine() const {
+		Matrix3<T> m3 = to_matrix3();
+		Matrix3<T> m3_inv = m3.inverse();
+
+		Matrix4 result = identity();
+		result[0][0] = m3_inv[0][0];
+		result[0][1] = m3_inv[0][1];
+		result[0][2] = m3_inv[0][2];
+		result[1][0] = m3_inv[1][0];
+		result[1][1] = m3_inv[1][1];
+		result[1][2] = m3_inv[1][2];
+		result[2][0] = m3_inv[2][0];
+		result[2][1] = m3_inv[2][1];
+		result[2][2] = m3_inv[2][2];
+
+		Vector3<T> t(cols[3].x, cols[3].y, cols[3].z);
+		Vector3<T> neg_inv_t = -(m3_inv * t);
+		result[3][0] = neg_inv_t.x;
+		result[3][1] = neg_inv_t.y;
+		result[3][2] = neg_inv_t.z;
+
+		return result;
+	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse() const {
+		T s0 = cols[0][0] * cols[1][1] - cols[0][1] * cols[1][0];
+		T s1 = cols[0][0] * cols[2][1] - cols[0][1] * cols[2][0];
+		T s2 = cols[0][0] * cols[3][1] - cols[0][1] * cols[3][0];
+		T s3 = cols[1][0] * cols[2][1] - cols[1][1] * cols[2][0];
+		T s4 = cols[1][0] * cols[3][1] - cols[1][1] * cols[3][0];
+		T s5 = cols[2][0] * cols[3][1] - cols[2][1] * cols[3][0];
+
+		T c0 = cols[0][2] * cols[1][3] - cols[0][3] * cols[1][2];
+		T c1 = cols[0][2] * cols[2][3] - cols[0][3] * cols[2][2];
+		T c2 = cols[0][2] * cols[3][3] - cols[0][3] * cols[3][2];
+		T c3 = cols[1][2] * cols[2][3] - cols[1][3] * cols[2][2];
+		T c4 = cols[1][2] * cols[3][3] - cols[1][3] * cols[3][2];
+		T c5 = cols[2][2] * cols[3][3] - cols[2][3] * cols[3][2];
+
+		T det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+
+		if (Epsilon<T>::approx_zero(det)) {
+			return identity();
+		}
+
+		T inv_det = T(1) / det;
+
+		Matrix4 result;
+		result[0][0] = (cols[1][1] * c5 - cols[2][1] * c4 + cols[3][1] * c3) * inv_det;
+		result[0][1] = (-cols[0][1] * c5 + cols[2][1] * c2 - cols[3][1] * c1) * inv_det;
+		result[0][2] = (cols[0][1] * c4 - cols[1][1] * c2 + cols[3][1] * c0) * inv_det;
+		result[0][3] = (-cols[0][1] * c3 + cols[1][1] * c1 - cols[2][1] * c0) * inv_det;
+
+		result[1][0] = (-cols[1][0] * c5 + cols[2][0] * c4 - cols[3][0] * c3) * inv_det;
+		result[1][1] = (cols[0][0] * c5 - cols[2][0] * c2 + cols[3][0] * c1) * inv_det;
+		result[1][2] = (-cols[0][0] * c4 + cols[1][0] * c2 - cols[3][0] * c0) * inv_det;
+		result[1][3] = (cols[0][0] * c3 - cols[1][0] * c1 + cols[2][0] * c0) * inv_det;
+
+		result[2][0] = (cols[1][3] * s5 - cols[2][3] * s4 + cols[3][3] * s3) * inv_det;
+		result[2][1] = (-cols[0][3] * s5 + cols[2][3] * s2 - cols[3][3] * s1) * inv_det;
+		result[2][2] = (cols[0][3] * s4 - cols[1][3] * s2 + cols[3][3] * s0) * inv_det;
+		result[2][3] = (-cols[0][3] * s3 + cols[1][3] * s1 - cols[2][3] * s0) * inv_det;
+
+		result[3][0] = (-cols[1][2] * s5 + cols[2][2] * s4 - cols[3][2] * s3) * inv_det;
+		result[3][1] = (cols[0][2] * s5 - cols[2][2] * s2 + cols[3][2] * s1) * inv_det;
+		result[3][2] = (-cols[0][2] * s4 + cols[1][2] * s2 - cols[3][2] * s0) * inv_det;
+		result[3][3] = (cols[0][2] * s3 - cols[1][2] * s1 + cols[2][2] * s0) * inv_det;
+
+		return result;
+	}
 };
 
 using Matrix4f = Matrix4<float>;
 using Matrix4d = Matrix4<double>;
+
+
+
+
+
 
 template <typename T>
 struct Quaternion {
@@ -2725,7 +2859,7 @@ struct Quaternion {
 		return from_to_rotation(from, to);
 	}
 
-	[[nodiscard]] void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
+	void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
 		out_angle = angle();
 		out_axis = axis();
 	}
@@ -3141,6 +3275,11 @@ template <typename T>
 using Quaternionf = Quaternion<float>;
 using Quaterniond = Quaternion<double>;
 
+
+
+
+
+
 template <typename T>
 struct DualQuaternion {
 	static_assert(std::is_floating_point_v<T>, "DualQuaternion requires floating-point type");
@@ -3357,6 +3496,10 @@ struct DualQuaternion {
 
 using DualQuaternionf = DualQuaternion<float>;
 using DualQuaterniond = DualQuaternion<double>;
+
+
+
+
 
 namespace simd {
 
@@ -3598,7 +3741,7 @@ inline void lerp_arrays(Vector4f *result, const Vector4f *a, const Vector4f *b, 
 	}
 }
 
-} //namespace batch
+} 
 
 #else
 
@@ -3746,11 +3889,15 @@ inline void lerp_arrays(Vector4f *result, const Vector4f *a, const Vector4f *b, 
 	}
 }
 
-} //namespace batch
+} 
 
 #endif
 
-} //namespace simd
+} 
+
+
+
+
 
 template <typename T>
 struct BSpline {
@@ -3884,6 +4031,11 @@ struct BSpline {
 
 using BSplinef = BSpline<float>;
 using BSplined = BSpline<double>;
+
+
+
+
+
 
 template <typename T>
 struct CurveFrame {
@@ -4448,6 +4600,11 @@ using CatmullRomSplined = CatmullRomSpline<double>;
 using HermiteSplinef = HermiteSpline<float>;
 using HermiteSplined = HermiteSpline<double>;
 
+
+
+
+
+
 template <typename T>
 struct NURBS {
 	static_assert(std::is_floating_point_v<T>, "NURBS requires floating-point type");
@@ -4735,6 +4892,11 @@ struct NURBS {
 using NURBSf = NURBS<float>;
 using NURBSd = NURBS<double>;
 
+
+
+
+
+
 template <typename T>
 struct Ray {
 	static_assert(std::is_floating_point_v<T>, "Ray requires floating-point type");
@@ -4761,6 +4923,11 @@ struct Ray {
 
 using Rayf = Ray<float>;
 using Rayd = Ray<double>;
+
+
+
+
+
 
 template <typename T>
 struct AABB {
@@ -4942,6 +5109,11 @@ struct AABB {
 using AABBf = AABB<float>;
 using AABBd = AABB<double>;
 
+
+
+
+
+
 template <typename T>
 struct Sphere {
 	static_assert(std::is_floating_point_v<T>, "Sphere requires floating-point type");
@@ -5097,6 +5269,11 @@ struct Sphere {
 
 using Spheref = Sphere<float>;
 using Sphered = Sphere<double>;
+
+
+
+
+
 
 template <typename T>
 struct BoundingVolumeUtils {
@@ -5445,6 +5622,11 @@ struct BoundingFrustum {
 using BoundingFrustumf = BoundingFrustum<float>;
 using BoundingFrustumd = BoundingFrustum<double>;
 
+
+
+
+
+
 template <typename T>
 struct Capsule {
 	static_assert(std::is_floating_point_v<T>, "Capsule requires floating-point type");
@@ -5599,6 +5781,11 @@ struct Capsule {
 using Capsulef = Capsule<float>;
 using Capsuled = Capsule<double>;
 
+
+
+
+
+
 template <typename T>
 struct Cone {
 	static_assert(std::is_floating_point_v<T>, "Cone requires floating-point type");
@@ -5723,6 +5910,11 @@ struct Cone {
 using Conef = Cone<float>;
 using Coned = Cone<double>;
 
+
+
+
+
+
 template <typename T>
 struct Cylinder {
 	static_assert(std::is_floating_point_v<T>, "Cylinder requires floating-point type");
@@ -5831,6 +6023,11 @@ struct Cylinder {
 using Cylinderf = Cylinder<float>;
 using Cylinderd = Cylinder<double>;
 
+
+
+
+
+
 template <typename T>
 struct Plane {
 	static_assert(std::is_floating_point_v<T>, "Plane requires floating-point type");
@@ -5897,6 +6094,11 @@ struct Plane {
 
 using Planef = Plane<float>;
 using Planed = Plane<double>;
+
+
+
+
+
 
 template <typename T>
 struct Frustum {
@@ -6023,6 +6225,11 @@ struct Frustum {
 
 using Frustumf = Frustum<float>;
 using Frustumd = Frustum<double>;
+
+
+
+
+
 
 template <typename T>
 struct Triangle {
@@ -6232,6 +6439,11 @@ struct Triangle {
 using Trianglef = Triangle<float>;
 using Triangled = Triangle<double>;
 
+
+
+
+
+
 namespace intersection {
 
 template <typename T>
@@ -6366,9 +6578,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 	T discriminant = b * b - a * c;
 
 	if (discriminant < T(0)) {
-		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-		return hit_a || hit_b;
+		T t_a, t_b;
+		Vector3<T> p_a, p_b;
+		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+		if (hit_a && hit_b) {
+			out_t = t_a < t_b ? t_a : t_b;
+			out_point = t_a < t_b ? p_a : p_b;
+		} else if (hit_a) {
+			out_t = t_a;
+			out_point = p_a;
+		} else if (hit_b) {
+			out_t = t_b;
+			out_point = p_b;
+		} else {
+			return false;
+		}
+		return true;
 	}
 
 	T t = (-b - std::sqrt(discriminant)) / a;
@@ -6383,9 +6609,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 		}
 	}
 
-	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-	return hit_a || hit_b;
+	T t_a, t_b;
+	Vector3<T> p_a, p_b;
+	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+	if (hit_a && hit_b) {
+		out_t = t_a < t_b ? t_a : t_b;
+		out_point = t_a < t_b ? p_a : p_b;
+	} else if (hit_a) {
+		out_t = t_a;
+		out_point = p_a;
+	} else if (hit_b) {
+		out_t = t_b;
+		out_point = p_b;
+	} else {
+		return false;
+	}
+	return true;
 }
 
 template <typename T>
@@ -6675,7 +6915,12 @@ inline T distance_segment_segment(const LineSegment<T> &s1, const LineSegment<T>
 using LineSegmentf = LineSegment<float>;
 using LineSegmentd = LineSegment<double>;
 
-} //namespace intersection
+} 
+
+
+
+
+
 
 template <typename T>
 struct Line2D {
@@ -6867,6 +7112,11 @@ using Line2Df = Line2D<float>;
 using Line2Dd = Line2D<double>;
 using Line3Df = Line3D<float>;
 using Line3Dd = Line3D<double>;
+
+
+
+
+
 
 template <typename T>
 struct Polygon2D {
@@ -7147,8 +7397,13 @@ struct Polygon2D {
 using Polygon2Df = Polygon2D<float>;
 using Polygon2Dd = Polygon2D<double>;
 
+
+
+
+
 #if MML_USE_SIMD
 #endif
+
 
 template <typename T, typename PrimitiveType>
 struct BVHNode {
@@ -7498,7 +7753,6 @@ private:
 		return ray_aabb_intersect_distance(origin, direction, box, tmin, tmax);
 	}
 
-#if MML_USE_SIMD
 	[[nodiscard]] bool ray_aabb_intersect_distance(const Vector3<T> &origin, const Vector3<T> &direction,
 			const AABB<T> &box, T &tmin, T &tmax) const {
 		T tymin, tymax, tzmin, tzmax;
@@ -7576,7 +7830,6 @@ private:
 
 		return tmin <= tmax && tmax >= T(0);
 	}
-#endif
 
 	[[nodiscard]] bool aabb_in_frustum(const AABB<T> &box, const std::array<Vector3<T>, 6> &planes) const {
 		for (const auto &plane : planes) {
@@ -7598,6 +7851,11 @@ private:
 
 using BVHf = BVH<float, void>;
 using BVHd = BVH<double, void>;
+
+
+
+
+
 
 enum class SplitAxis {
 	X = 0,
@@ -7910,6 +8168,11 @@ private:
 using KDTreef = KDTree<float, void>;
 using KDTreed = KDTree<double, void>;
 
+
+
+
+
+
 template <typename T>
 struct OctreeNode {
 	AABB<T> bounds;
@@ -8173,6 +8436,11 @@ private:
 using Octreef = Octree<float, void>;
 using Octreed = Octree<double, void>;
 
+
+
+
+
+
 template <typename T>
 struct Transform {
 	static_assert(std::is_floating_point_v<T>, "Transform requires floating-point type");
@@ -8296,6 +8564,11 @@ struct Transform {
 using Transformf = Transform<float>;
 using Transformd = Transform<double>;
 
+
+
+
+
+
 namespace transform_flags {
 constexpr uint32_t POSITION_CHANGED = 1 << 0;
 constexpr uint32_t ROTATION_CHANGED = 1 << 1;
@@ -8303,7 +8576,7 @@ constexpr uint32_t SCALE_CHANGED = 1 << 2;
 constexpr uint32_t LOCAL_CHANGED = POSITION_CHANGED | ROTATION_CHANGED | SCALE_CHANGED;
 constexpr uint32_t PARENT_CHANGED = 1 << 3;
 constexpr uint32_t WORLD_CHANGED = LOCAL_CHANGED | PARENT_CHANGED;
-} //namespace transform_flags
+} 
 
 template <typename T>
 struct TransformNode {
@@ -8436,7 +8709,7 @@ public:
 		return _world_matrix_cache;
 	}
 
-	MML_FORCE_INLINE void update_world_matrix() const {
+	void update_world_matrix() const {
 		if (!(_dirty_flags & transform_flags::WORLD_CHANGED)) {
 			return;
 		}
@@ -8595,6 +8868,11 @@ struct TransformHierarchy {
 using TransformHierarchyf = TransformHierarchy<float>;
 using TransformHierarchyd = TransformHierarchy<double>;
 
+
+
+
+
+
 template <typename T>
 struct Angle {
 	static_assert(std::is_floating_point_v<T>, "Angle requires floating-point type");
@@ -8636,6 +8914,11 @@ struct Angle {
 
 using Anglef = Angle<float>;
 using Angled = Angle<double>;
+
+
+
+
+
 
 template <typename T>
 struct Basis3 {
@@ -8885,6 +9168,11 @@ inline bool basis_equals(const Basis3<T> &a, const Basis3<T> &b, T epsilon = Eps
 
 using Basis3f = Basis3<float>;
 using Basis3d = Basis3<double>;
+
+
+
+
+
 
 template <typename T>
 struct Color {
@@ -9215,6 +9503,11 @@ struct Color {
 using Colorf = Color<float>;
 using Colord = Color<double>;
 
+
+
+
+
+
 template <typename T>
 struct Interpolation {
 	static_assert(std::is_floating_point_v<T>, "Interpolation requires floating-point type");
@@ -9328,6 +9621,11 @@ struct Interpolation {
 using Interpolationf = Interpolation<float>;
 using Interpolationd = Interpolation<double>;
 
+
+
+
+
+
 template <typename T>
 struct Projection {
 	static_assert(std::is_floating_point_v<T>, "Projection requires floating-point type");
@@ -9440,6 +9738,11 @@ struct Projection {
 
 using Projectionf = Projection<float>;
 using Projectiond = Projection<double>;
+
+
+
+
+
 
 template <typename T>
 struct Random {
@@ -9583,6 +9886,11 @@ public:
 using Randomf = Random<float>;
 using Randomd = Random<double>;
 using Randomi = Random<int>;
+
+
+
+
+
 
 namespace random {
 
@@ -9983,7 +10291,12 @@ using RandomPCG = PCG32;
 using RandomXoroshiro = Xoroshiro128Plus;
 using RandomSplitMix = SplitMix64;
 
-} //namespace random
+} 
+
+
+
+
+
 
 template <typename T>
 struct Vector3SoA {

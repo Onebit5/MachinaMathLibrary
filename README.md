@@ -272,6 +272,6 @@ MIT License - see [LICENSE](LICENSE.txt) for details.
 
 ## Version
 
-Current version: **v1.0.0**
+Current version: **v1.0.1**
 
 See [CHANGELOG](docs/CHANGELOG.md) for release history.

@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -32,6 +32,7 @@
 #include "../algebra/quaternion.hpp"
 #include "../algebra/vector3.hpp"
 #include "../core/config.hpp"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -177,7 +178,7 @@ public:
 		return _world_matrix_cache;
 	}
 
-	MML_FORCE_INLINE void update_world_matrix() const {
+	void update_world_matrix() const {
 		if (!(_dirty_flags & transform_flags::WORLD_CHANGED)) {
 			return;
 		}
