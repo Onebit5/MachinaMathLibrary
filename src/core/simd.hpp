@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -149,7 +149,8 @@ struct Float8 {
 	Float8 operator+(const Float8 &rhs) const { return Float8(_mm256_add_ps(v, rhs.v)); }
 	Float8 operator-(const Float8 &rhs) const { return Float8(_mm256_sub_ps(v, rhs.v)); }
 	Float8 operator*(const Float8 &rhs) const { return Float8(_mm256_mul_ps(v, rhs.v)); }
-	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm_set1_ps(scalar))); }
+	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm256_set1_ps(scalar))); }
+};
 
 	struct Double4 {
 		__m256d v;

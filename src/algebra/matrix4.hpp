@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -426,6 +426,77 @@ struct [[nodiscard]] Matrix4 {
 
 	[[nodiscard]] MML_FORCE_INLINE Vector3<T> forward_vector_raw() const {
 		return Vector3<T>(cols[2].x, cols[2].y, cols[2].z);
+	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse_affine() const {
+		Matrix3<T> m3 = to_matrix3();
+		Matrix3<T> m3_inv = m3.inverse();
+
+		Matrix4 result = identity();
+		result[0][0] = m3_inv[0][0];
+		result[0][1] = m3_inv[0][1];
+		result[0][2] = m3_inv[0][2];
+		result[1][0] = m3_inv[1][0];
+		result[1][1] = m3_inv[1][1];
+		result[1][2] = m3_inv[1][2];
+		result[2][0] = m3_inv[2][0];
+		result[2][1] = m3_inv[2][1];
+		result[2][2] = m3_inv[2][2];
+
+		Vector3<T> t(cols[3].x, cols[3].y, cols[3].z);
+		Vector3<T> neg_inv_t = -(m3_inv * t);
+		result[3][0] = neg_inv_t.x;
+		result[3][1] = neg_inv_t.y;
+		result[3][2] = neg_inv_t.z;
+
+		return result;
+	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse() const {
+		T s0 = cols[0][0] * cols[1][1] - cols[0][1] * cols[1][0];
+		T s1 = cols[0][0] * cols[2][1] - cols[0][1] * cols[2][0];
+		T s2 = cols[0][0] * cols[3][1] - cols[0][1] * cols[3][0];
+		T s3 = cols[1][0] * cols[2][1] - cols[1][1] * cols[2][0];
+		T s4 = cols[1][0] * cols[3][1] - cols[1][1] * cols[3][0];
+		T s5 = cols[2][0] * cols[3][1] - cols[2][1] * cols[3][0];
+
+		T c0 = cols[0][2] * cols[1][3] - cols[0][3] * cols[1][2];
+		T c1 = cols[0][2] * cols[2][3] - cols[0][3] * cols[2][2];
+		T c2 = cols[0][2] * cols[3][3] - cols[0][3] * cols[3][2];
+		T c3 = cols[1][2] * cols[2][3] - cols[1][3] * cols[2][2];
+		T c4 = cols[1][2] * cols[3][3] - cols[1][3] * cols[3][2];
+		T c5 = cols[2][2] * cols[3][3] - cols[2][3] * cols[3][2];
+
+		T det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+
+		if (Epsilon<T>::approx_zero(det)) {
+			return identity();
+		}
+
+		T inv_det = T(1) / det;
+
+		Matrix4 result;
+		result[0][0] = (cols[1][1] * c5 - cols[2][1] * c4 + cols[3][1] * c3) * inv_det;
+		result[0][1] = (-cols[0][1] * c5 + cols[2][1] * c2 - cols[3][1] * c1) * inv_det;
+		result[0][2] = (cols[0][1] * c4 - cols[1][1] * c2 + cols[3][1] * c0) * inv_det;
+		result[0][3] = (-cols[0][1] * c3 + cols[1][1] * c1 - cols[2][1] * c0) * inv_det;
+
+		result[1][0] = (-cols[1][0] * c5 + cols[2][0] * c4 - cols[3][0] * c3) * inv_det;
+		result[1][1] = (cols[0][0] * c5 - cols[2][0] * c2 + cols[3][0] * c1) * inv_det;
+		result[1][2] = (-cols[0][0] * c4 + cols[1][0] * c2 - cols[3][0] * c0) * inv_det;
+		result[1][3] = (cols[0][0] * c3 - cols[1][0] * c1 + cols[2][0] * c0) * inv_det;
+
+		result[2][0] = (cols[1][3] * s5 - cols[2][3] * s4 + cols[3][3] * s3) * inv_det;
+		result[2][1] = (-cols[0][3] * s5 + cols[2][3] * s2 - cols[3][3] * s1) * inv_det;
+		result[2][2] = (cols[0][3] * s4 - cols[1][3] * s2 + cols[3][3] * s0) * inv_det;
+		result[2][3] = (-cols[0][3] * s3 + cols[1][3] * s1 - cols[2][3] * s0) * inv_det;
+
+		result[3][0] = (-cols[1][2] * s5 + cols[2][2] * s4 - cols[3][2] * s3) * inv_det;
+		result[3][1] = (cols[0][2] * s5 - cols[2][2] * s2 + cols[3][2] * s1) * inv_det;
+		result[3][2] = (-cols[0][2] * s4 + cols[1][2] * s2 - cols[3][2] * s0) * inv_det;
+		result[3][3] = (cols[0][2] * s3 - cols[1][2] * s1 + cols[2][2] * s0) * inv_det;
+
+		return result;
 	}
 };
 

@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -173,9 +173,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 	T discriminant = b * b - a * c;
 
 	if (discriminant < T(0)) {
-		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-		return hit_a || hit_b;
+		T t_a, t_b;
+		Vector3<T> p_a, p_b;
+		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+		if (hit_a && hit_b) {
+			out_t = t_a < t_b ? t_a : t_b;
+			out_point = t_a < t_b ? p_a : p_b;
+		} else if (hit_a) {
+			out_t = t_a;
+			out_point = p_a;
+		} else if (hit_b) {
+			out_t = t_b;
+			out_point = p_b;
+		} else {
+			return false;
+		}
+		return true;
 	}
 
 	T t = (-b - std::sqrt(discriminant)) / a;
@@ -190,9 +204,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 		}
 	}
 
-	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-	return hit_a || hit_b;
+	T t_a, t_b;
+	Vector3<T> p_a, p_b;
+	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+	if (hit_a && hit_b) {
+		out_t = t_a < t_b ? t_a : t_b;
+		out_point = t_a < t_b ? p_a : p_b;
+	} else if (hit_a) {
+		out_t = t_a;
+		out_point = p_a;
+	} else if (hit_b) {
+		out_t = t_b;
+		out_point = p_b;
+	} else {
+		return false;
+	}
+	return true;
 }
 
 template <typename T>
