@@ -132,7 +132,8 @@ struct BSpline {
 		size_t n = control_points.size();
 
 		for (size_t i = 0; i < n - 1; ++i) {
-			T factor = degree * T(n) / T(n - 1);
+			T span = knots[i + static_cast<size_t>(degree) + 1] - knots[i + 1];
+			T factor = Epsilon<T>::approx_zero(span) ? T(0) : T(degree) / span;
 			derivative_points.push_back((control_points[i + 1] - control_points[i]) * factor);
 		}
 

@@ -32,6 +32,7 @@
 #include "../algebra/quaternion.hpp"
 #include "../algebra/vector3.hpp"
 #include "../core/config.hpp"
+#include <cstdint>
 #include <memory>
 #include <vector>
 
@@ -177,7 +178,7 @@ public:
 		return _world_matrix_cache;
 	}
 
-	MML_FORCE_INLINE void update_world_matrix() const {
+	void update_world_matrix() const {
 		if (!(_dirty_flags & transform_flags::WORLD_CHANGED)) {
 			return;
 		}

@@ -19,6 +19,7 @@ CPP_INCLUDES = """#include <cmath>
 #include <type_traits>
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <vector>
 #include <limits>
 #include <ostream>

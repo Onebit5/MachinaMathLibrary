@@ -285,7 +285,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D triangle(const Vector2<T> &a, const Vector2<T> &b, const Vector2<T> &c) {
-		Polygon2D poly(3);
+		Polygon2D poly;
 		poly.add_vertex(a);
 		poly.add_vertex(b);
 		poly.add_vertex(c);
@@ -293,7 +293,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D rectangle(const Vector2<T> &min_v, const Vector2<T> &max_v) {
-		Polygon2D poly(4);
+		Polygon2D poly;
 		poly.add_vertex(Vector2<T>(min_v.x, min_v.y));
 		poly.add_vertex(Vector2<T>(max_v.x, min_v.y));
 		poly.add_vertex(Vector2<T>(max_v.x, max_v.y));
@@ -302,7 +302,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D regular(T radius, size_t sides, const Vector2<T> &center = Vector2<T>(T(0), T(0)), T rotation = T(0)) {
-		Polygon2D poly(sides);
+		Polygon2D poly;
 		T angle_step = Constants<T>::two_pi / T(sides);
 
 		for (size_t i = 0; i < sides; ++i) {

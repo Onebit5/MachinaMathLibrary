@@ -397,7 +397,6 @@ private:
 		return ray_aabb_intersect_distance(origin, direction, box, tmin, tmax);
 	}
 
-#if MML_USE_SIMD
 	[[nodiscard]] bool ray_aabb_intersect_distance(const Vector3<T> &origin, const Vector3<T> &direction,
 			const AABB<T> &box, T &tmin, T &tmax) const {
 		T tymin, tymax, tzmin, tzmax;
@@ -475,7 +474,6 @@ private:
 
 		return tmin <= tmax && tmax >= T(0);
 	}
-#endif
 
 	[[nodiscard]] bool aabb_in_frustum(const AABB<T> &box, const std::array<Vector3<T>, 6> &planes) const {
 		for (const auto &plane : planes) {
