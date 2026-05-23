@@ -65,7 +65,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][0]);
 		T left_dist = view_proj[3][3] + view_proj[3][0];
 		T left_len = left_normal.length();
-		f.planes[LEFT] = Plane<T>(left_normal / left_len, left_dist / left_len);
+		f.planes[LEFT] = Plane<T>(left_normal / left_len, -left_dist / left_len);
 
 		Vector3<T> right_normal(
 				view_proj[0][3] - view_proj[0][0],
@@ -73,7 +73,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][0]);
 		T right_dist = view_proj[3][3] - view_proj[3][0];
 		T right_len = right_normal.length();
-		f.planes[RIGHT] = Plane<T>(right_normal / right_len, right_dist / right_len);
+		f.planes[RIGHT] = Plane<T>(right_normal / right_len, -right_dist / right_len);
 
 		Vector3<T> bottom_normal(
 				view_proj[0][3] + view_proj[0][1],
@@ -81,7 +81,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][1]);
 		T bottom_dist = view_proj[3][3] + view_proj[3][1];
 		T bottom_len = bottom_normal.length();
-		f.planes[BOTTOM] = Plane<T>(bottom_normal / bottom_len, bottom_dist / bottom_len);
+		f.planes[BOTTOM] = Plane<T>(bottom_normal / bottom_len, -bottom_dist / bottom_len);
 
 		Vector3<T> top_normal(
 				view_proj[0][3] - view_proj[0][1],
@@ -89,7 +89,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][1]);
 		T top_dist = view_proj[3][3] - view_proj[3][1];
 		T top_len = top_normal.length();
-		f.planes[TOP] = Plane<T>(top_normal / top_len, top_dist / top_len);
+		f.planes[TOP] = Plane<T>(top_normal / top_len, -top_dist / top_len);
 
 		Vector3<T> near_normal(
 				view_proj[0][3] + view_proj[0][2],
@@ -97,7 +97,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][2]);
 		T near_dist = view_proj[3][3] + view_proj[3][2];
 		T near_len = near_normal.length();
-		f.planes[NEAR] = Plane<T>(near_normal / near_len, near_dist / near_len);
+		f.planes[NEAR] = Plane<T>(near_normal / near_len, -near_dist / near_len);
 
 		Vector3<T> far_normal(
 				view_proj[0][3] - view_proj[0][2],
@@ -105,7 +105,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][2]);
 		T far_dist = view_proj[3][3] - view_proj[3][2];
 		T far_len = far_normal.length();
-		f.planes[FAR] = Plane<T>(far_normal / far_len, far_dist / far_len);
+		f.planes[FAR] = Plane<T>(far_normal / far_len, -far_dist / far_len);
 
 		return f;
 	}

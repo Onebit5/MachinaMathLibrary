@@ -315,7 +315,7 @@ void test_line_and_polygon() {
 	assert_equal_float(poly.centroid().x, 5.0f, "Polygon2D::centroid() x");
 
 	mml::Polygon2Df hex = mml::Polygon2Df::regular(5.0f, 6);
-	assert_equal_float(hex.area(), 54.1266f, "Polygon2D::regular(6) area()", 1e-3f);
+	assert_equal_float(hex.area(), 64.951904f, "Polygon2D::regular(6) area()", 1e-3f);
 }
 
 void test_random() {

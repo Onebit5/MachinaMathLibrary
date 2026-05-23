@@ -181,11 +181,12 @@ struct NURBS {
 		size_t n = control_points.size();
 
 		for (size_t i = 0; i < n - 1; ++i) {
-			T factor = degree * T(n) / T(n - 1);
+			T span = knots[i + static_cast<size_t>(degree) + 1] - knots[i + 1];
+			T factor = Epsilon<T>::approx_zero(span) ? T(0) : T(degree) / span;
 			Vector3<T> p1 = control_points[i] * weights[i];
 			Vector3<T> p2 = control_points[i + 1] * weights[i + 1];
 			Vector3<T> diff = (p2 - p1) * factor;
-			T w_diff = weights[i + 1] - weights[i];
+			T w_diff = (weights[i + 1] - weights[i]) * factor;
 
 			derivative_points.push_back(diff);
 			derivative_weights.push_back(w_diff);

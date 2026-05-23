@@ -418,8 +418,9 @@ struct CatmullRomSpline {
 
 		T dt = T(0.001);
 		Vector3<T> p_before = evaluate_segment(segment, Math<T>::clamp(local_t - dt, T(0), T(1)));
+		Vector3<T> p_mid = evaluate_segment(segment, local_t);
 		Vector3<T> p_after = evaluate_segment(segment, Math<T>::clamp(local_t + dt, T(0), T(1)));
-		Vector3<T> d2 = (p_after - p_before * T(2) + p_before).normalized();
+		Vector3<T> d2 = (p_after - p_mid * T(2) + p_before).normalized();
 
 		Vector3<T> bin = tan.cross(d2);
 		if (bin.length() < Epsilon<T>::value) {

@@ -73,19 +73,20 @@ struct DualQuaternion {
 	}
 
 	[[nodiscard]] Matrix4<T> to_matrix4() const {
-		Matrix4<T> result;
+		DualQuaternion n = normalized();
+		Quaternion<T> r = n.real;
+		Quaternion<T> d = n.dual;
 
-		Quaternion<T> r = real.normalized();
-		Quaternion<T> d = dual.normalized();
-
-		T wx = r.w * r.x, wy = r.w * r.y, wz = r.w * r.z;
 		T xx = r.x * r.x, xy = r.x * r.y, xz = r.x * r.z;
 		T yy = r.y * r.y, yz = r.y * r.z, zz = r.z * r.z;
-		T tx = T(2) * (d.w * r.x - d.x * r.w + d.y * r.z - d.z * r.y);
-		T ty = T(2) * (d.w * r.y - d.x * r.z - d.y * r.w + d.z * r.x);
-		T tz = T(2) * (d.w * r.z + d.x * r.y - d.y * r.x - d.z * r.w);
-		T tw = T(2) * (-d.w * r.w + d.x * r.x + d.y * r.y + d.z * r.z);
+		T wx = r.w * r.x, wy = r.w * r.y, wz = r.w * r.z;
 
+		Quaternion<T> t_quat = d * r.conjugate();
+		T tx = T(2) * t_quat.x;
+		T ty = T(2) * t_quat.y;
+		T tz = T(2) * t_quat.z;
+
+		Matrix4<T> result;
 		result[0][0] = T(1) - T(2) * (yy + zz);
 		result[0][1] = T(2) * (xy + wz);
 		result[0][2] = T(2) * (xz - wy);
@@ -104,7 +105,7 @@ struct DualQuaternion {
 		result[3][0] = T(0);
 		result[3][1] = T(0);
 		result[3][2] = T(0);
-		result[3][3] = tw;
+		result[3][3] = T(1);
 
 		return result;
 	}
@@ -135,14 +136,8 @@ struct DualQuaternion {
 	}
 
 	[[nodiscard]] Vector3<T> translation() const {
-		T wx = real.w * dual.x, wy = real.w * dual.y, wz = real.w * dual.z;
-		T xx = real.x * dual.x, xy = real.x * dual.y, xz = real.x * dual.z;
-		T yy = real.y * dual.y, yz = real.y * dual.z, zz = real.z * dual.z;
-
-		return Vector3<T>(
-				wy - yz - xz + xy,
-				wz - xz - xy + yz,
-				wx - xy - yz + xz);
+		Quaternion<T> t_quat = dual * real.conjugate();
+		return Vector3<T>(T(2) * t_quat.x, T(2) * t_quat.y, T(2) * t_quat.z);
 	}
 
 	[[nodiscard]] DualQuaternion operator+(const DualQuaternion &rhs) const {

@@ -3312,19 +3312,20 @@ struct DualQuaternion {
 	}
 
 	[[nodiscard]] Matrix4<T> to_matrix4() const {
-		Matrix4<T> result;
+		DualQuaternion n = normalized();
+		Quaternion<T> r = n.real;
+		Quaternion<T> d = n.dual;
 
-		Quaternion<T> r = real.normalized();
-		Quaternion<T> d = dual.normalized();
-
-		T wx = r.w * r.x, wy = r.w * r.y, wz = r.w * r.z;
 		T xx = r.x * r.x, xy = r.x * r.y, xz = r.x * r.z;
 		T yy = r.y * r.y, yz = r.y * r.z, zz = r.z * r.z;
-		T tx = T(2) * (d.w * r.x - d.x * r.w + d.y * r.z - d.z * r.y);
-		T ty = T(2) * (d.w * r.y - d.x * r.z - d.y * r.w + d.z * r.x);
-		T tz = T(2) * (d.w * r.z + d.x * r.y - d.y * r.x - d.z * r.w);
-		T tw = T(2) * (-d.w * r.w + d.x * r.x + d.y * r.y + d.z * r.z);
+		T wx = r.w * r.x, wy = r.w * r.y, wz = r.w * r.z;
 
+		Quaternion<T> t_quat = d * r.conjugate();
+		T tx = T(2) * t_quat.x;
+		T ty = T(2) * t_quat.y;
+		T tz = T(2) * t_quat.z;
+
+		Matrix4<T> result;
 		result[0][0] = T(1) - T(2) * (yy + zz);
 		result[0][1] = T(2) * (xy + wz);
 		result[0][2] = T(2) * (xz - wy);
@@ -3343,7 +3344,7 @@ struct DualQuaternion {
 		result[3][0] = T(0);
 		result[3][1] = T(0);
 		result[3][2] = T(0);
-		result[3][3] = tw;
+		result[3][3] = T(1);
 
 		return result;
 	}
@@ -3374,14 +3375,8 @@ struct DualQuaternion {
 	}
 
 	[[nodiscard]] Vector3<T> translation() const {
-		T wx = real.w * dual.x, wy = real.w * dual.y, wz = real.w * dual.z;
-		T xx = real.x * dual.x, xy = real.x * dual.y, xz = real.x * dual.z;
-		T yy = real.y * dual.y, yz = real.y * dual.z, zz = real.z * dual.z;
-
-		return Vector3<T>(
-				wy - yz - xz + xy,
-				wz - xz - xy + yz,
-				wx - xy - yz + xz);
+		Quaternion<T> t_quat = dual * real.conjugate();
+		return Vector3<T>(T(2) * t_quat.x, T(2) * t_quat.y, T(2) * t_quat.z);
 	}
 
 	[[nodiscard]] DualQuaternion operator+(const DualQuaternion &rhs) const {
@@ -3992,7 +3987,8 @@ struct BSpline {
 		size_t n = control_points.size();
 
 		for (size_t i = 0; i < n - 1; ++i) {
-			T factor = degree * T(n) / T(n - 1);
+			T span = knots[i + static_cast<size_t>(degree) + 1] - knots[i + 1];
+			T factor = Epsilon<T>::approx_zero(span) ? T(0) : T(degree) / span;
 			derivative_points.push_back((control_points[i + 1] - control_points[i]) * factor);
 		}
 
@@ -4415,8 +4411,9 @@ struct CatmullRomSpline {
 
 		T dt = T(0.001);
 		Vector3<T> p_before = evaluate_segment(segment, Math<T>::clamp(local_t - dt, T(0), T(1)));
+		Vector3<T> p_mid = evaluate_segment(segment, local_t);
 		Vector3<T> p_after = evaluate_segment(segment, Math<T>::clamp(local_t + dt, T(0), T(1)));
-		Vector3<T> d2 = (p_after - p_before * T(2) + p_before).normalized();
+		Vector3<T> d2 = (p_after - p_mid * T(2) + p_before).normalized();
 
 		Vector3<T> bin = tan.cross(d2);
 		if (bin.length() < Epsilon<T>::value) {
@@ -4745,11 +4742,12 @@ struct NURBS {
 		size_t n = control_points.size();
 
 		for (size_t i = 0; i < n - 1; ++i) {
-			T factor = degree * T(n) / T(n - 1);
+			T span = knots[i + static_cast<size_t>(degree) + 1] - knots[i + 1];
+			T factor = Epsilon<T>::approx_zero(span) ? T(0) : T(degree) / span;
 			Vector3<T> p1 = control_points[i] * weights[i];
 			Vector3<T> p2 = control_points[i + 1] * weights[i + 1];
 			Vector3<T> diff = (p2 - p1) * factor;
-			T w_diff = weights[i + 1] - weights[i];
+			T w_diff = (weights[i + 1] - weights[i]) * factor;
 
 			derivative_points.push_back(diff);
 			derivative_weights.push_back(w_diff);
@@ -6127,7 +6125,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][0]);
 		T left_dist = view_proj[3][3] + view_proj[3][0];
 		T left_len = left_normal.length();
-		f.planes[LEFT] = Plane<T>(left_normal / left_len, left_dist / left_len);
+		f.planes[LEFT] = Plane<T>(left_normal / left_len, -left_dist / left_len);
 
 		Vector3<T> right_normal(
 				view_proj[0][3] - view_proj[0][0],
@@ -6135,7 +6133,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][0]);
 		T right_dist = view_proj[3][3] - view_proj[3][0];
 		T right_len = right_normal.length();
-		f.planes[RIGHT] = Plane<T>(right_normal / right_len, right_dist / right_len);
+		f.planes[RIGHT] = Plane<T>(right_normal / right_len, -right_dist / right_len);
 
 		Vector3<T> bottom_normal(
 				view_proj[0][3] + view_proj[0][1],
@@ -6143,7 +6141,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][1]);
 		T bottom_dist = view_proj[3][3] + view_proj[3][1];
 		T bottom_len = bottom_normal.length();
-		f.planes[BOTTOM] = Plane<T>(bottom_normal / bottom_len, bottom_dist / bottom_len);
+		f.planes[BOTTOM] = Plane<T>(bottom_normal / bottom_len, -bottom_dist / bottom_len);
 
 		Vector3<T> top_normal(
 				view_proj[0][3] - view_proj[0][1],
@@ -6151,7 +6149,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][1]);
 		T top_dist = view_proj[3][3] - view_proj[3][1];
 		T top_len = top_normal.length();
-		f.planes[TOP] = Plane<T>(top_normal / top_len, top_dist / top_len);
+		f.planes[TOP] = Plane<T>(top_normal / top_len, -top_dist / top_len);
 
 		Vector3<T> near_normal(
 				view_proj[0][3] + view_proj[0][2],
@@ -6159,7 +6157,7 @@ struct Frustum {
 				view_proj[2][3] + view_proj[2][2]);
 		T near_dist = view_proj[3][3] + view_proj[3][2];
 		T near_len = near_normal.length();
-		f.planes[NEAR] = Plane<T>(near_normal / near_len, near_dist / near_len);
+		f.planes[NEAR] = Plane<T>(near_normal / near_len, -near_dist / near_len);
 
 		Vector3<T> far_normal(
 				view_proj[0][3] - view_proj[0][2],
@@ -6167,7 +6165,7 @@ struct Frustum {
 				view_proj[2][3] - view_proj[2][2]);
 		T far_dist = view_proj[3][3] - view_proj[3][2];
 		T far_len = far_normal.length();
-		f.planes[FAR] = Plane<T>(far_normal / far_len, far_dist / far_len);
+		f.planes[FAR] = Plane<T>(far_normal / far_len, -far_dist / far_len);
 
 		return f;
 	}
@@ -7362,7 +7360,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D triangle(const Vector2<T> &a, const Vector2<T> &b, const Vector2<T> &c) {
-		Polygon2D poly(3);
+		Polygon2D poly;
 		poly.add_vertex(a);
 		poly.add_vertex(b);
 		poly.add_vertex(c);
@@ -7370,7 +7368,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D rectangle(const Vector2<T> &min_v, const Vector2<T> &max_v) {
-		Polygon2D poly(4);
+		Polygon2D poly;
 		poly.add_vertex(Vector2<T>(min_v.x, min_v.y));
 		poly.add_vertex(Vector2<T>(max_v.x, min_v.y));
 		poly.add_vertex(Vector2<T>(max_v.x, max_v.y));
@@ -7379,7 +7377,7 @@ struct Polygon2D {
 	}
 
 	MML_FORCE_INLINE static Polygon2D regular(T radius, size_t sides, const Vector2<T> &center = Vector2<T>(T(0), T(0)), T rotation = T(0)) {
-		Polygon2D poly(sides);
+		Polygon2D poly;
 		T angle_step = Constants<T>::two_pi / T(sides);
 
 		for (size_t i = 0; i < sides; ++i) {
