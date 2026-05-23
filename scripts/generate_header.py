@@ -11,7 +11,16 @@ PROJECT_ROOT = Path(__file__).parent.parent
 SRC_DIR = PROJECT_ROOT / "src"
 OUTPUT_FILE = PROJECT_ROOT / "mml.hpp"
 
+AUTHOR = "Jose A. Perez de Azpillaga"
+LINE_WIDTH = 76
 HEADER_GUARD = "MML_HPP"
+
+def format_header_line(content):
+    content_area = LINE_WIDTH - 6
+    padding = content_area - len(content)
+    if padding < 1:
+        padding = 1
+    return f"/* {content}{' ' * padding} */"
 
 CPP_INCLUDES = """#include <cmath>
 #include <cstddef>
@@ -26,7 +35,17 @@ CPP_INCLUDES = """#include <cmath>
 #include <istream>
 #include <functional>
 #include <numeric>
-#include <random>"""
+#include <random>
+
+#if defined(__SSE2__) || defined(__AVX__)
+#include <emmintrin.h>
+#endif
+#if defined(__SSE4_1__) || defined(__AVX__)
+#include <smmintrin.h>
+#endif
+#if defined(__AVX__)
+#include <immintrin.h>
+#endif"""
 
 
 def find_header_files():
@@ -187,7 +206,38 @@ def generate_single_header():
 
     header_content = "\n\n".join(processed_contents)
 
-    template = f"""#ifndef {HEADER_GUARD}
+    copyright_line = format_header_line(f"Copyright (c) 2026-present {AUTHOR}")
+
+    license_text = f"""/**************************************************************************/
+/*  mml.hpp — Machina Math Library (single-header)                      */
+/**************************************************************************/
+/*                         This file is part of:                          */
+/*                         MACHINA MATH LIBRARY                           */
+/**************************************************************************/
+{copyright_line}
+/*                                                                        */
+/* Permission is hereby granted, free of charge, to any person obtaining  */
+/* a copy of this software and associated documentation files (the        */
+/* "Software"), to deal in the Software without restriction, including    */
+/* without limitation, to use, copy, modify, merge, publish,              */
+/* distribute, sublicense, and/or sell copies of the Software, and to     */
+/* permit persons to whom the Software is furnished to do so, subject to  */
+/* the following conditions:                                              */
+/*                                                                        */
+/* The above copyright notice and this permission notice shall be         */
+/* included in all copies or substantial portions of the Software.        */
+/*                                                                        */
+/* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,        */
+/* EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF     */
+/* MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. */
+/* IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY   */
+/* CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,   */
+/* TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE      */
+/* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
+/**************************************************************************/"""
+
+    template = f"""{license_text}
+#ifndef {HEADER_GUARD}
 #define {HEADER_GUARD}
 
 {CPP_INCLUDES}

@@ -43,6 +43,16 @@
 #include <numeric>
 #include <random>
 
+#if defined(__SSE2__) || defined(__AVX__)
+#include <emmintrin.h>
+#endif
+#if defined(__SSE4_1__) || defined(__AVX__)
+#include <smmintrin.h>
+#endif
+#if defined(__AVX__)
+#include <immintrin.h>
+#endif
+
 namespace mml {
 
 
@@ -120,7 +130,7 @@ namespace mml {
 #endif
 
 #ifndef MML_EPSILON
-#define MML_EPSILON 1e-6f
+#define MML_EPSILON 1e-6
 #endif
 
 
@@ -541,7 +551,7 @@ struct Math {
 
 	MML_FORCE_INLINE static bool is_inf(T value) {
 		if constexpr (std::is_floating_point_v<T>) {
-			return value > Constants<T>::infinity || value < -Constants<T>::infinity;
+			return std::isinf(value);
 		}
 		return false;
 	}
@@ -1382,7 +1392,8 @@ struct Float8 {
 	Float8 operator+(const Float8 &rhs) const { return Float8(_mm256_add_ps(v, rhs.v)); }
 	Float8 operator-(const Float8 &rhs) const { return Float8(_mm256_sub_ps(v, rhs.v)); }
 	Float8 operator*(const Float8 &rhs) const { return Float8(_mm256_mul_ps(v, rhs.v)); }
-	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm_set1_ps(scalar))); }
+	Float8 operator*(float scalar) const { return Float8(_mm256_mul_ps(v, _mm256_set1_ps(scalar))); }
+};
 
 	struct Double4 {
 		__m256d v;
@@ -2695,6 +2706,77 @@ struct [[nodiscard]] Matrix4 {
 	[[nodiscard]] MML_FORCE_INLINE Vector3<T> forward_vector_raw() const {
 		return Vector3<T>(cols[2].x, cols[2].y, cols[2].z);
 	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse_affine() const {
+		Matrix3<T> m3 = to_matrix3();
+		Matrix3<T> m3_inv = m3.inverse();
+
+		Matrix4 result = identity();
+		result[0][0] = m3_inv[0][0];
+		result[0][1] = m3_inv[0][1];
+		result[0][2] = m3_inv[0][2];
+		result[1][0] = m3_inv[1][0];
+		result[1][1] = m3_inv[1][1];
+		result[1][2] = m3_inv[1][2];
+		result[2][0] = m3_inv[2][0];
+		result[2][1] = m3_inv[2][1];
+		result[2][2] = m3_inv[2][2];
+
+		Vector3<T> t(cols[3].x, cols[3].y, cols[3].z);
+		Vector3<T> neg_inv_t = -(m3_inv * t);
+		result[3][0] = neg_inv_t.x;
+		result[3][1] = neg_inv_t.y;
+		result[3][2] = neg_inv_t.z;
+
+		return result;
+	}
+
+	[[nodiscard]] MML_FORCE_INLINE Matrix4 inverse() const {
+		T s0 = cols[0][0] * cols[1][1] - cols[0][1] * cols[1][0];
+		T s1 = cols[0][0] * cols[2][1] - cols[0][1] * cols[2][0];
+		T s2 = cols[0][0] * cols[3][1] - cols[0][1] * cols[3][0];
+		T s3 = cols[1][0] * cols[2][1] - cols[1][1] * cols[2][0];
+		T s4 = cols[1][0] * cols[3][1] - cols[1][1] * cols[3][0];
+		T s5 = cols[2][0] * cols[3][1] - cols[2][1] * cols[3][0];
+
+		T c0 = cols[0][2] * cols[1][3] - cols[0][3] * cols[1][2];
+		T c1 = cols[0][2] * cols[2][3] - cols[0][3] * cols[2][2];
+		T c2 = cols[0][2] * cols[3][3] - cols[0][3] * cols[3][2];
+		T c3 = cols[1][2] * cols[2][3] - cols[1][3] * cols[2][2];
+		T c4 = cols[1][2] * cols[3][3] - cols[1][3] * cols[3][2];
+		T c5 = cols[2][2] * cols[3][3] - cols[2][3] * cols[3][2];
+
+		T det = s0 * c5 - s1 * c4 + s2 * c3 + s3 * c2 - s4 * c1 + s5 * c0;
+
+		if (Epsilon<T>::approx_zero(det)) {
+			return identity();
+		}
+
+		T inv_det = T(1) / det;
+
+		Matrix4 result;
+		result[0][0] = (cols[1][1] * c5 - cols[2][1] * c4 + cols[3][1] * c3) * inv_det;
+		result[0][1] = (-cols[0][1] * c5 + cols[2][1] * c2 - cols[3][1] * c1) * inv_det;
+		result[0][2] = (cols[0][1] * c4 - cols[1][1] * c2 + cols[3][1] * c0) * inv_det;
+		result[0][3] = (-cols[0][1] * c3 + cols[1][1] * c1 - cols[2][1] * c0) * inv_det;
+
+		result[1][0] = (-cols[1][0] * c5 + cols[2][0] * c4 - cols[3][0] * c3) * inv_det;
+		result[1][1] = (cols[0][0] * c5 - cols[2][0] * c2 + cols[3][0] * c1) * inv_det;
+		result[1][2] = (-cols[0][0] * c4 + cols[1][0] * c2 - cols[3][0] * c0) * inv_det;
+		result[1][3] = (cols[0][0] * c3 - cols[1][0] * c1 + cols[2][0] * c0) * inv_det;
+
+		result[2][0] = (cols[1][3] * s5 - cols[2][3] * s4 + cols[3][3] * s3) * inv_det;
+		result[2][1] = (-cols[0][3] * s5 + cols[2][3] * s2 - cols[3][3] * s1) * inv_det;
+		result[2][2] = (cols[0][3] * s4 - cols[1][3] * s2 + cols[3][3] * s0) * inv_det;
+		result[2][3] = (-cols[0][3] * s3 + cols[1][3] * s1 - cols[2][3] * s0) * inv_det;
+
+		result[3][0] = (-cols[1][2] * s5 + cols[2][2] * s4 - cols[3][2] * s3) * inv_det;
+		result[3][1] = (cols[0][2] * s5 - cols[2][2] * s2 + cols[3][2] * s1) * inv_det;
+		result[3][2] = (-cols[0][2] * s4 + cols[1][2] * s2 - cols[3][2] * s0) * inv_det;
+		result[3][3] = (cols[0][2] * s3 - cols[1][2] * s1 + cols[2][2] * s0) * inv_det;
+
+		return result;
+	}
 };
 
 using Matrix4f = Matrix4<float>;
@@ -2777,7 +2859,7 @@ struct Quaternion {
 		return from_to_rotation(from, to);
 	}
 
-	[[nodiscard]] void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
+	void to_axis_angle(Vector3<T> &out_axis, T &out_angle) const {
 		out_angle = angle();
 		out_axis = axis();
 	}
@@ -6494,9 +6576,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 	T discriminant = b * b - a * c;
 
 	if (discriminant < T(0)) {
-		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-		return hit_a || hit_b;
+		T t_a, t_b;
+		Vector3<T> p_a, p_b;
+		bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+		bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+		if (hit_a && hit_b) {
+			out_t = t_a < t_b ? t_a : t_b;
+			out_point = t_a < t_b ? p_a : p_b;
+		} else if (hit_a) {
+			out_t = t_a;
+			out_point = p_a;
+		} else if (hit_b) {
+			out_t = t_b;
+			out_point = p_b;
+		} else {
+			return false;
+		}
+		return true;
 	}
 
 	T t = (-b - std::sqrt(discriminant)) / a;
@@ -6511,9 +6607,23 @@ inline bool ray_capsule(const Ray<T> &ray, const Capsule<T> &capsule, T &out_t, 
 		}
 	}
 
-	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, out_t, out_point);
-	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, out_t, out_point);
-	return hit_a || hit_b;
+	T t_a, t_b;
+	Vector3<T> p_a, p_b;
+	bool hit_a = ray_sphere(ray, capsule.a, capsule.radius, t_a, p_a);
+	bool hit_b = ray_sphere(ray, capsule.b, capsule.radius, t_b, p_b);
+	if (hit_a && hit_b) {
+		out_t = t_a < t_b ? t_a : t_b;
+		out_point = t_a < t_b ? p_a : p_b;
+	} else if (hit_a) {
+		out_t = t_a;
+		out_point = p_a;
+	} else if (hit_b) {
+		out_t = t_b;
+		out_point = p_b;
+	} else {
+		return false;
+	}
+	return true;
 }
 
 template <typename T>

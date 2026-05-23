@@ -4,7 +4,7 @@
 /*                         This file is part of:                          */
 /*                         MACHINA MATH LIBRARY                           */
 /**************************************************************************/
-/* Copyright (c) 2026-present Jose A. Perez                               */
+/* Copyright (c) 2026-present Jose A. Perez de Azpillaga                  */
 /*                                                                        */
 /* Permission is hereby granted, free of charge, to any person obtaining  */
 /* a copy of this software and associated documentation files (the        */
@@ -293,7 +293,7 @@ struct Math {
 
 	MML_FORCE_INLINE static bool is_inf(T value) {
 		if constexpr (std::is_floating_point_v<T>) {
-			return value > Constants<T>::infinity || value < -Constants<T>::infinity;
+			return std::isinf(value);
 		}
 		return false;
 	}
